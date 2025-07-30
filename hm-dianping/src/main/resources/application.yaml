@@ -32,6 +32,18 @@ spring:
           time-between-eviction-runs: 10s
   jackson:
     default-property-inclusion: non_null # JSON处理时忽略非空字段
+  mail:
+    host: smtp.163.com # QQ邮箱SMTP服务器
+    port: 465
+    username: kaleidoscope_x@163.com
+    password: MNQii9bWUWaPdLYG # 注意不是邮箱密码，而是开启SMTP服务后生成的授权码
+    protocol: smtps
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          ssl:
+            enable: true
 mybatis-plus:
   type-aliases-package: com.hmdp.entity # 别名扫描包
 logging:

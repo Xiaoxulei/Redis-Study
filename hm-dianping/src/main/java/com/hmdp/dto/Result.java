@@ -18,6 +18,9 @@ public class Result {
     public static Result ok(){
         return new Result(true, null, null, null);
     }
+    public static Result okk(String msg){
+        return new Result(true, msg, null, null);
+    }
     public static Result ok(Object data){
         return new Result(true, null, data, null);
     }

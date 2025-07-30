@@ -12,6 +12,7 @@ import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
+import com.hmdp.utils.MailService;
 import com.hmdp.utils.RegexUtils;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,12 +47,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Resource
+    private MailService mailService;
+
     @Override
     public Result sendCode(String phone, HttpSession session) {
         //1.号码校验
-        if (RegexUtils.isPhoneInvalid(phone)) {
+        if (RegexUtils.isEmailInvalid(phone)) {
             //2.不符合，返回错误信息
-            return Result.fail("手机号格式错误");
+            return Result.fail("邮箱格式错误");
         }
         //3.符合，生成验证码
         String code = RandomUtil.randomNumbers(6);
@@ -60,18 +64,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         //4.保存验证码到redis,
         stringRedisTemplate.opsForValue().set( LOGIN_CODE_KEY + phone,code,LOGIN_CODE_TTL, TimeUnit.MINUTES);
         //5发送验证码
+       /* mailService.sendCode(phone,code);*/
         log.debug("发送短信验证码成功，验证码：{}",code);
         //返回ok
-        return Result.ok();
+        return Result.okk("发送验证码成功，请注意查收!");
     }
 
     @Override
     public Result login(LoginFormDTO loginForm, HttpSession session) {
         //1校验手机号
         String phone = loginForm.getPhone();
-        if (RegexUtils.isPhoneInvalid(phone)) {
+        if (RegexUtils.isEmailInvalid(phone)) {
             //2.不符合，返回错误信息
-            return Result.fail("手机号格式错误");
+            return Result.fail("邮箱格式错误");
         }
         //2.校验验证码
         //Object cacheCode = session.getAttribute("code");
