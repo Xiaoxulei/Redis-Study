@@ -46,6 +46,14 @@ spring:
             enable: true
 mybatis-plus:
   type-aliases-package: com.hmdp.entity # 别名扫描包
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 logging:
   level:
     com.hmdp: debug
+    org:
+      springframework:
+        security: DEBUG
+jwt:
+  secret: xuxiaoleiJwtSecretKeyxuxiaoleiJwtSecretKeyxiaoxulei
+  expiration: 86400000 # 1 天（单位：毫秒）

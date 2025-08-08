@@ -4,14 +4,16 @@ import ch.qos.logback.core.util.TimeUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.util.RandomUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.QueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.hmdp.dto.LoginFormDTO;
-import com.hmdp.dto.Result;
-import com.hmdp.dto.UserDTO;
+import com.hmdp.dto.*;
 import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
+import com.hmdp.utils.JwtUtil;
 import com.hmdp.utils.MailService;
 import com.hmdp.utils.RegexUtils;
 import jakarta.annotation.Resource;
@@ -22,9 +24,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.TimeoutUtils;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.CopyOption;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -96,7 +103,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         }
         //4.一致，根据手机号查询用户
-        User user = query().eq("phone", phone).one();
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getPhone,phone);
+        User user = getOne(queryWrapper);
         //5.判断用户是否存在
         if (user == null) {
            //6.不存在，创建新用户
@@ -133,12 +142,48 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         return Result.ok();
     }
 
+    @Resource
+    private AuthenticationManager authenticationManager;
+    @Resource
+    private JwtUtil jwtUtil;
+    @Resource
+    private RedisTemplate<String,Object> redisTemplate;
+    @Override
+    public Result login(LoginRequest loginRequest) {
+        // 1. 登录认证（会调用 loadUserByUsername）
+        try {
+            Authentication authenticate = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()
+                    )
+            );
+            // 2. 登录成功，获取用户信息
+            LoginUser loginUser  = (LoginUser) authenticate.getPrincipal();
+            String userId = loginUser.getUser().getId().toString();
+            // 3. 生成 JWT
+            String token = jwtUtil.generateToken(userId);
+            // 4. 用户信息保存到 Redis
+            redisTemplate.opsForValue().set(LOGIN_USER_KEY_PREFIX + userId ,loginUser, Duration.ofMinutes(10));
+            // 5. 返回 token 和 user
+            return Result.ok(Map.of(
+                    "token",token,
+                    "userId",userId,
+                    "phone",loginUser.getUser().getPhone()
+            ));
+
+        } catch (AuthenticationException e) {
+            return Result.fail("登录失败" + e.getMessage());
+        }
+    }
+
     //创建新用户
     public User creatUserWithPhone(String phone) {
         User user = new User();
         user.setPhone(phone);
         user.setNickName(USER_NICK_NAME_PREFIX + RandomUtil.randomNumbers(10));
-        boolean result = save(user);
+        boolean result = this.save(user);
+        log.debug("保存用户结果：{}", result);
         if (result) {
             System.out.println("User saved successfully.");
         } else {

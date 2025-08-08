@@ -2,6 +2,8 @@ package com.hmdp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.hmdp.dto.LoginFormDTO;
+import com.hmdp.dto.LoginRequest;
+import com.hmdp.dto.LoginUser;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,4 +24,6 @@ public interface IUserService extends IService<User> {
     Result login(LoginFormDTO loginForm, HttpSession session);
 
     Result logout(HttpServletRequest request);
+
+    Result login(LoginRequest loginRequest);
 }
